@@ -1,0 +1,461 @@
+---
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/500.css';
+import '@fontsource/space-grotesk/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import { ClientRouter } from 'astro:transitions';
+import Sidebar from '../components/Sidebar.astro';
+import ViewToggle from '../components/ViewToggle.astro';
+import Toc from '../components/Toc.astro';
+import Search from '../components/Search.astro';
+import '../styles/global.css';
+import config from '@config';
+import { paletteCss } from '../lib/palette';
+import { strings as S } from '../lib/strings';
+const paletteStyle = paletteCss();
+// Optional font-stack overrides -> CSS vars, injected alongside the palette.
+const f = config.fonts;
+const fontCss = f
+  ? `:root{${f.body ? `--font-body:${f.body};` : ''}${f.display ? `--font-display:${f.display};` : ''}${f.mono ? `--font-mono:${f.mono};` : ''}}`
+  : '';
+const rootStyle = paletteStyle + fontCss;
+// Reward widget: prefer config.reward; fall back to the legacy single-QR tipImage.
+const reward = config.reward
+  ?? (config.tipImage ? { methods: [{ type: 'qr' as const, label: '微信', image: config.tipImage }] } : null);
+// Strings the client script needs, injected via define:vars below.
+const ui = {
+  viewBoth: S.viewBoth, viewTranslation: S.viewTranslation, viewOriginal: S.viewOriginal,
+  codeCopy: S.codeCopy, codeCopied: S.codeCopied, peekOpen: S.peekOpen, peekClose: S.peekClose,
+};
+interface NavLink { href: string; title: string }
+interface Badge { label: string; kind?: string }
+interface Props { title: string; slug: string; hero?: boolean; sourceUrl?: string; sourceTitle?: string; updated?: string; description?: string; editPath?: string; prev?: NavLink; next?: NavLink; badges?: Badge[] }
+const { title, slug, hero = false, sourceUrl, sourceTitle, updated, description = config.siteName, editPath, prev, next, badges } = Astro.props;
+const pageTitle = `${title} · ${config.siteName}`;
+const canonical = `${config.siteUrl}/${slug ? slug + '/' : ''}`;
+// The "improve this page" link is off by default; a site opts in with showEditLink.
+const editUrl = (config.showEditLink && editPath) ? `${config.repoUrl}/edit/main/${editPath}` : null;
+---
+<!doctype html>
+<html lang={config.lang ?? 'zh'}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbfcfd" data-theme-color />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {/* Pagefind UI assets live in <head> so the ClientRouter preserves them
+        across view transitions — otherwise the persisted search box flashes
+        unstyled for a frame on each navigation. */}
+    <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+    <script is:inline src="/pagefind/pagefind-ui.js"></script>
+    <title>{pageTitle}</title>
+    <meta name="x-copy-note" content={config.attribution.copy} />
+    {rootStyle && <style is:inline set:html={rootStyle} />}
+    <ClientRouter />
+    <script is:inline>
+      (function () {
+        var v = localStorage.getItem('docs-cn-view')
+          || (window.matchMedia('(max-width: 600px)').matches ? 'zh' : 'both');
+        document.documentElement.setAttribute('data-view', v);
+        var t = localStorage.getItem('docs-cn-theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
+  </head>
+  <body>
+    <Sidebar currentSlug={slug} />
+    <div class="nav-backdrop" data-nav-close aria-hidden="true"></div>
+    {!hero && (
+      <svg class="watermark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="wm" width="440" height="260" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+            <text x="0" y="130" fill="currentColor" font-size="14" font-family="var(--font-mono)">{config.attribution.watermark}</text>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#wm)"></rect>
+      </svg>
+    )}
+    <main class={hero ? 'content content-hero' : 'content'} data-pagefind-body transition:animate="none">
+      <header class="topbar">
+        <button class="menu-btn" data-nav-toggle aria-label={S.navMenuOpen}>≡</button>
+        {!hero && <ViewToggle />}
+        {!hero && <Toc />}
+        <span class="spacer"></span>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label={S.themeToggleLabel} title={S.themeToggleTitle}>
+          <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+        </button>
+        <Search />
+      </header>
+      <div class="page">
+        {!hero && <h1>{title}</h1>}
+        {!hero && badges && badges.length > 0 && (
+          <div class="page-badges" data-pagefind-ignore>
+            {badges.map((b) => (<span class={b.kind ? `badge badge-${b.kind}` : 'badge'}>{b.label}</span>))}
+          </div>
+        )}
+        {!hero && (
+          <div class="page-meta">
+            <p>
+              {sourceUrl && (<>{S.sourcePrefix}<a href={sourceUrl} target="_blank" rel="noopener noreferrer">{sourceTitle}</a></>)}
+              <span class={sourceUrl ? 'meta-sep' : undefined}>{S.translatorLabel}{config.translator}</span>
+              {updated && <span class="meta-sep">{S.updatedLabel}{updated}</span>}
+            </p>
+          </div>
+        )}
+        {!hero && (
+          <div class="mobile-hint" data-mobile-hint data-pagefind-ignore>
+            <span class="mh-text">{S.mobileHint}</span>
+            <button class="mh-close" data-hint-close type="button" aria-label={S.closeHint}>×</button>
+          </div>
+        )}
+        <slot />
+        {!hero && (prev || next) && (
+          <nav class="pager" aria-label={S.pagerLabel}>
+            {prev ? (
+              <a class="pager-link pager-prev" href={prev.href}>
+                <svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                <span class="pager-txt"><span class="pager-dir">{S.pagerPrev}</span><span class="pager-title">{prev.title}</span></span>
+              </a>
+            ) : <span></span>}
+            {next ? (
+              <a class="pager-link pager-next" href={next.href}>
+                <span class="pager-txt"><span class="pager-dir">{S.pagerNext}</span><span class="pager-title">{next.title}</span></span>
+                <svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+              </a>
+            ) : <span></span>}
+          </nav>
+        )}
+        {!hero && (
+          <footer class="page-footer">
+            <p class="footer-meta">{S.translatorLabel}{config.translator}{updated && <span class="meta-sep">{S.updatedLabel}{updated}</span>}{editUrl && (<a class="edit-link meta-sep" href={editUrl} target="_blank" rel="noopener noreferrer">{S.editLink}</a>)}</p>
+            {reward && reward.methods.length > 0 && (
+              <div class="post-reward">
+                <div class="reward-comment">{reward.comment ?? S.rewardComment}</div>
+                <input type="checkbox" class="reward-input" id="fi-reward" hidden />
+                <label class="reward-button" for="fi-reward">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm10-2h2v2h-2v-2zm4 0h2v2h-2v-2zm-4 4h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v4h-2v-4z"/></svg>
+                  {reward.label ?? S.rewardButton}
+                </label>
+                <div class="reward-ways">
+                  {reward.methods.map((m) => (
+                    m.type === 'qr' ? (
+                      <div>
+                        <img src={m.image} alt={m.label} width="200" loading="lazy" />
+                        <span>{m.label}</span>
+                      </div>
+                    ) : (
+                      <a class="reward-link" href={m.href} target="_blank" rel="noopener noreferrer">{m.label}</a>
+                    )
+                  ))}
+                </div>
+              </div>
+            )}
+          </footer>
+        )}
+      </div>
+    </main>
+
+    {!hero && (
+      <button class="to-top" data-to-top type="button" aria-label={S.toTop} title={S.toTop} hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>
+      </button>
+    )}
+    {!hero && (
+      <div class="lightbox" data-lightbox hidden aria-hidden="true">
+        <img alt="" />
+      </div>
+    )}
+
+    <script is:inline define:vars={{ ui }}>
+      (function () {
+        var VIEW_KEY = 'docs-cn-view';
+        var valid = ['both', 'zh', 'en'];
+        var navScroll = 0;   // sidebar scrollTop to hold across a navigation
+        var navigating = false;
+        function pinSidebar() {
+          var sb = document.querySelector('.sidebar');
+          if (sb) sb.scrollTop = navScroll;
+        }
+
+        var THEME_KEY = 'docs-cn-theme';
+        // re-apply the saved theme on every navigation — view transitions swap
+        // the <html> for the new page's server-rendered one, which has no theme
+        function applyTheme() {
+          var t = localStorage.getItem(THEME_KEY);
+          if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+          else document.documentElement.removeAttribute('data-theme');
+          var tc = document.querySelector('[data-theme-color]');
+          if (tc) tc.setAttribute('content', t === 'dark' ? '#0c1420' : '#fbfcfd');
+        }
+
+        var VIEW_LABELS = { both: ui.viewBoth, zh: ui.viewTranslation, en: ui.viewOriginal };
+        function applyView(v) {
+          var mode = valid.indexOf(v) >= 0 ? v : 'both';
+          document.documentElement.setAttribute('data-view', mode);
+          document.querySelectorAll('[data-view-btn]').forEach(function (b) {
+            b.setAttribute('aria-selected', b.getAttribute('data-view-btn') === mode ? 'true' : 'false');
+          });
+          var lab = document.querySelector('[data-view-label]');
+          if (lab) lab.textContent = VIEW_LABELS[mode] || VIEW_LABELS.both;
+        }
+        function closeViewMenu() {
+          var m = document.querySelector('[data-view-menu]');
+          if (!m) return;
+          var p = m.querySelector('[data-view-pop]'); if (p) p.hidden = true;
+          var b = m.querySelector('[data-view-toggle-btn]'); if (b) b.setAttribute('aria-expanded', 'false');
+        }
+
+        function closeToc() {
+          var r = document.querySelector('[data-toc-root]');
+          if (!r) return;
+          var p = r.querySelector('[data-toc-pop]'); if (p) p.hidden = true;
+          var b = r.querySelector('[data-toc-toggle]'); if (b) b.setAttribute('aria-expanded', 'false');
+        }
+
+        function toggleToTop() {
+          var tt = document.querySelector('[data-to-top]');
+          if (tt) tt.hidden = (window.scrollY || window.pageYOffset) < 400;
+        }
+        function closeLightbox() {
+          var lb = document.querySelector('[data-lightbox]');
+          if (lb && !lb.hidden) { lb.hidden = true; var im = lb.querySelector('img'); if (im) im.src = ''; document.body.classList.remove('lb-open'); }
+        }
+        var HINT_KEY = 'docs-cn-hint';
+        function dismissHint() {
+          try { localStorage.setItem(HINT_KEY, '1'); } catch (e) {}
+          document.querySelectorAll('[data-mobile-hint]').forEach(function (h) { h.classList.add('dismissed'); });
+        }
+        function applyHint() {
+          var dismissed = false;
+          try { dismissed = localStorage.getItem(HINT_KEY) === '1'; } catch (e) {}
+          document.querySelectorAll('[data-mobile-hint]').forEach(function (h) { h.classList.toggle('dismissed', dismissed); });
+        }
+        // add code-copy buttons and mark external links (re-run per navigation)
+        function enhanceArticle() {
+          document.querySelectorAll('.bilingual pre').forEach(function (pre) {
+            if (pre.dataset.copyReady || !pre.querySelector('code')) return;
+            pre.dataset.copyReady = '1';
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'code-copy'; b.textContent = ui.codeCopy;
+            pre.appendChild(b);
+          });
+          document.querySelectorAll('.bilingual a[href^="http"]').forEach(function (a) {
+            if (a.dataset.ext) return;
+            if (a.hostname && a.hostname !== location.hostname) {
+              a.target = '_blank'; a.rel = 'noopener noreferrer'; a.dataset.ext = '1';
+            }
+          });
+        }
+
+        function updateSidebarActive() {
+          var sb = document.querySelector('.sidebar'); if (!sb) return;
+          sb.querySelectorAll('a[aria-current]').forEach(function (a) { a.removeAttribute('aria-current'); });
+          var here = location.pathname;
+          var cur = sb.querySelector('a[href="' + here + '"]');
+          if (!cur && here.slice(-1) !== '/') cur = sb.querySelector('a[href="' + here + '/"]');
+          if (cur) {
+            cur.setAttribute('aria-current', 'page');
+            var d = cur.closest('details'); if (d) d.open = true;
+            // expand every collapsible ancestor so the current page is visible
+            var node = cur.closest('.nav-item');
+            while (node) {
+              var childUl = node.querySelector(':scope > .nav-children');
+              if (childUl) {
+                childUl.hidden = false;
+                var tg = node.querySelector(':scope > .nav-row > .nav-toggle');
+                if (tg) tg.setAttribute('aria-expanded', 'true');
+              }
+              node = node.parentElement ? node.parentElement.closest('.nav-item') : null;
+            }
+          }
+        }
+
+        var tocRows = [], tocLinks = [];
+        function buildToc() {
+          tocRows = []; tocLinks = [];
+          var root = document.querySelector('[data-toc-root]'); if (!root) return;
+          var list = root.querySelector('[data-toc-list]'); if (!list) return;
+          list.innerHTML = '';
+          var all = Array.prototype.slice.call(document.querySelectorAll('.bilingual [data-toc]'));
+          function lvl(r) { return parseInt(r.getAttribute('data-toc-level'), 10) || 2; }
+          // prefer H2/H3 sections; if a page has none, fall back to its H1 title
+          // so every article still gets a table of contents
+          var sub = all.filter(function (r) { var l = lvl(r); return l >= 2 && l <= 3; });
+          var rows = sub.length ? sub : all.filter(function (r) { return lvl(r) === 1; });
+          if (rows.length < 1) { root.style.display = 'none'; return; }
+          root.style.display = '';
+          rows.forEach(function (row) {
+            var a = document.createElement('a');
+            a.href = '#' + row.id; a.className = 'toc-link';
+            a.textContent = row.getAttribute('data-toc-label') || row.id;
+            a.setAttribute('data-level', row.getAttribute('data-toc-level') || '2');
+            a.setAttribute('data-for', row.id);
+            list.appendChild(a);
+          });
+          tocRows = rows; tocLinks = Array.prototype.slice.call(list.children);
+          closeToc();
+        }
+        function spy() {
+          if (!tocRows.length) return;
+          var offset = 80, cur = tocRows[0].id;
+          for (var i = 0; i < tocRows.length; i++) {
+            if (tocRows[i].getBoundingClientRect().top - offset <= 0) cur = tocRows[i].id; else break;
+          }
+          tocLinks.forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-for') === cur); });
+        }
+
+        if (!window.__docsInit) {
+          window.__docsInit = true;
+
+          // transition:persist keeps the sidebar node, but Astro re-attaches it
+          // during the swap (resetting a scroll container to 0), and later steps
+          // (opening the active section, focus) can nudge it again. Capture the
+          // scroll before the swap and re-pin it after swap + after page-load +
+          // next frame, so the sidebar stays exactly put — no jump, no flash.
+          document.addEventListener('astro:before-swap', function () {
+            var sb = document.querySelector('.sidebar');
+            if (sb) navScroll = sb.scrollTop;
+            navigating = true;
+          });
+          document.addEventListener('astro:after-swap', function () {
+            applyTheme();
+            var af = document.activeElement;
+            if (af && af.closest && af.closest('.sidebar')) af.blur();
+            pinSidebar();
+          });
+
+          document.addEventListener('click', function (e) {
+            var themeTgl = e.target.closest('[data-theme-toggle]');
+            if (themeTgl) {
+              // default is light, so no OS lookup: dark only when explicitly set
+              var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+              var next = isDark ? 'light' : 'dark';
+              document.documentElement.setAttribute('data-theme', next);
+              try { localStorage.setItem(THEME_KEY, next); } catch (err) {}
+              return;
+            }
+            var cc = e.target.closest('.code-copy');
+            if (cc) {
+              var pre = cc.closest('pre'), code = pre && pre.querySelector('code');
+              if (code) {
+                var txt = code.innerText;
+                try { (navigator.clipboard && navigator.clipboard.writeText(txt)); } catch (err) {}
+                cc.textContent = ui.codeCopied; cc.classList.add('done');
+                setTimeout(function () { cc.textContent = ui.codeCopy; cc.classList.remove('done'); }, 1500);
+              }
+              return;
+            }
+            var peek = e.target.closest('[data-peek]');
+            if (peek) {
+              var prow = peek.closest('.row');
+              if (prow) {
+                var opened = prow.classList.toggle('peek-open');
+                peek.setAttribute('aria-expanded', opened ? 'true' : 'false');
+                peek.textContent = opened ? ui.peekClose : ui.peekOpen;
+                dismissHint();
+              }
+              return;
+            }
+            if (e.target.closest('[data-hint-close]')) { dismissHint(); return; }
+            if (e.target.closest('[data-to-top]')) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+            if (e.target.closest('[data-lightbox]')) { closeLightbox(); return; }
+            var zi = e.target.closest('.bilingual img');
+            if (zi && !zi.closest('a')) {
+              var lb = document.querySelector('[data-lightbox]');
+              if (lb) { lb.querySelector('img').src = zi.currentSrc || zi.src; lb.hidden = false; document.body.classList.add('lb-open'); }
+              return;
+            }
+            var navTgl = e.target.closest('.nav-toggle');
+            if (navTgl) {
+              e.preventDefault();
+              var li = navTgl.closest('.nav-item');
+              var ul = li ? li.querySelector(':scope > .nav-children') : null;
+              if (ul) {
+                var willOpen = ul.hidden;
+                ul.hidden = !willOpen;
+                navTgl.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+              }
+              return;
+            }
+            var vt = e.target.closest('[data-view-toggle-btn]');
+            if (vt) {
+              e.stopPropagation();
+              var vp = document.querySelector('[data-view-pop]');
+              var vOpen = vp.hidden; vp.hidden = !vOpen;
+              vt.setAttribute('aria-expanded', vOpen ? 'true' : 'false');
+              return;
+            }
+            var vb = e.target.closest('[data-view-btn]');
+            if (vb) { var v = vb.getAttribute('data-view-btn'); localStorage.setItem(VIEW_KEY, v); applyView(v); closeViewMenu(); return; }
+            if (!e.target.closest('[data-view-menu]')) { closeViewMenu(); }
+            if (e.target.closest('[data-nav-toggle]')) { document.body.classList.toggle('nav-open'); return; }
+            if (e.target.closest('[data-nav-close]')) { document.body.classList.remove('nav-open'); return; }
+            var tt = e.target.closest('[data-toc-toggle]');
+            if (tt) {
+              e.stopPropagation();
+              var r = document.querySelector('[data-toc-root]'), p = r.querySelector('[data-toc-pop]');
+              var open = p.hidden; p.hidden = !open; tt.setAttribute('aria-expanded', open ? 'true' : 'false');
+              return;
+            }
+            if (e.target.closest('.toc-link')) { closeToc(); }
+            else if (!e.target.closest('[data-toc-root]')) { closeToc(); }
+            if (e.target.closest('.sidebar a')) { document.body.classList.remove('nav-open'); }
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { document.body.classList.remove('nav-open'); closeToc(); closeViewMenu(); closeLightbox(); }
+            // focus search: "/" or Cmd/Ctrl-K
+            var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable;
+            if ((e.key === '/' && !typing) || ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K'))) {
+              var si = document.querySelector('#search input');
+              if (si) { e.preventDefault(); si.focus(); }
+            }
+          });
+          // when a reader copies a chunk of an article, append the source line
+          document.addEventListener('copy', function (e) {
+            if (!document.querySelector('.bilingual')) return; // articles only
+            var sel = window.getSelection ? String(window.getSelection()) : '';
+            if (!sel || sel.length < 12) return; // don't bother tiny selections
+            var m = document.querySelector('meta[name="x-copy-note"]');
+            var note = m ? '\n\n— ' + m.getAttribute('content') : '';
+            try {
+              (e.clipboardData || window.clipboardData).setData('text/plain', sel + note);
+              e.preventDefault();
+            } catch (err) {}
+          });
+          var ticking = false;
+          window.addEventListener('scroll', function () {
+            if (ticking) return; ticking = true;
+            requestAnimationFrame(function () { ticking = false; spy(); toggleToTop(); });
+          }, { passive: true });
+          document.addEventListener('astro:page-load', onLoad);
+        }
+
+        function onLoad() {
+          applyTheme();
+          applyView(localStorage.getItem(VIEW_KEY)
+            || (window.matchMedia('(max-width: 600px)').matches ? 'zh' : 'both'));
+          updateSidebarActive();
+          buildToc();
+          enhanceArticle();
+          applyHint();
+          toggleToTop();
+          closeLightbox();
+          spy();
+          if (navigating) {
+            navigating = false;
+            pinSidebar();
+            requestAnimationFrame(pinSidebar);
+          }
+        }
+        onLoad();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "types": ["vitest/globals", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@config": ["site.config.mjs"],
+      "@theme/*": ["theme/*"]
+    }
+  }
+}

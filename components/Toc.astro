@@ -1,0 +1,14 @@
+---
+// The list is built (and scroll-spy wired) in Doc.astro so it rebuilds on each
+// client-side navigation. Markup only.
+import { strings as S } from '../lib/strings';
+---
+<div class="toc" data-toc-root>
+  <button class="toc-btn" data-toc-toggle aria-expanded="false" aria-haspopup="true">
+    <span class="toc-ico" aria-hidden="true">☰</span>{S.tocButton}
+  </button>
+  <div class="toc-pop" data-toc-pop hidden>
+    <p class="toc-head">{S.tocHeading}</p>
+    <nav class="toc-list" data-toc-list aria-label={S.tocHeading}></nav>
+  </div>
+</div>

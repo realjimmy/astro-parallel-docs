@@ -1,0 +1,36 @@
+---
+import { alignPair } from '../lib/align';
+import { getSlugSet } from '../lib/content';
+import { strings as S } from '../lib/strings';
+interface Props { enBody: string; zhBody: string | null; slug: string; sourceUrl?: string; }
+const { enBody, zhBody, slug, sourceUrl } = Astro.props;
+const result = alignPair(enBody, zhBody, sourceUrl, getSlugSet());
+if (result.mismatch) {
+  console.warn(`[align] block-count mismatch in ${slug}: en=${result.enCount} zh=${result.zhCount}`);
+}
+const fullyUntranslated = result.blocks.length > 0 && result.blocks.every((b) => !b.translated);
+---
+{fullyUntranslated && (
+  <div class="page-untranslated" data-pagefind-ignore>
+    <span class="tag">{S.untranslatedTag}</span>
+    <span>{S.untranslatedNote}</span>
+  </div>
+)}
+<div class="bilingual">
+  {result.blocks.map((b) => (
+    <div
+      class="row"
+      data-tr={b.translated ? 'yes' : 'no'}
+      id={b.heading?.id}
+      data-toc={b.heading ? '' : undefined}
+      data-toc-level={b.heading?.level}
+      data-toc-label={b.heading?.label}
+    >
+      <div class="col col-en" set:html={b.enHtml} />
+      <div class="col col-zh" set:html={b.zhHtml} data-pagefind-ignore={b.translated ? undefined : 'true'} />
+      {b.translated && (
+        <button class="peek-btn" type="button" data-peek aria-expanded="false" aria-label={S.peekAria} data-pagefind-ignore>{S.peekOpen}</button>
+      )}
+    </div>
+  ))}
+</div>

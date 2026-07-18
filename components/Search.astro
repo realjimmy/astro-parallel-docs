@@ -1,0 +1,28 @@
+---
+import { strings as S } from '../lib/strings';
+const searchStrings = { placeholder: S.searchPlaceholder, zeroResults: S.searchZeroResults };
+---
+<div id="search" transition:persist="search"></div>
+{/* pagefind-ui.css + pagefind-ui.js are loaded in <head> (see Doc.astro) so they
+    survive view transitions and the search box no longer flashes unstyled. */}
+<script is:inline define:vars={{ searchStrings }}>
+  (function () {
+    function init() {
+      var el = document.getElementById('search');
+      if (!el || el.dataset.ready || !window.PagefindUI) return;
+      el.dataset.ready = '1';
+      new window.PagefindUI({
+        element: '#search',
+        showSubResults: true,
+        translations: { placeholder: searchStrings.placeholder, zero_results: searchStrings.zeroResults },
+      });
+    }
+    var tries = 0;
+    var iv = setInterval(function () {
+      init();
+      var el = document.getElementById('search');
+      if ((el && el.dataset.ready) || ++tries > 40) clearInterval(iv);
+    }, 50);
+    document.addEventListener('astro:page-load', init);
+  })();
+</script>

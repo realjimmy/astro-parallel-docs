@@ -1,0 +1,35 @@
+---
+import Doc from '@theme/layouts/Doc.astro';
+import Bilingual from '@theme/components/Bilingual.astro';
+import { getAllPages, getPage } from '@theme/lib/content';
+import { orderedSlugs } from '@theme/lib/nav';
+
+export function getStaticPaths() {
+  return getAllPages().map((p) => ({ params: { slug: p.slug }, props: { page: p } }));
+}
+const { page } = Astro.props;
+
+// previous / next article in reading order
+const order = orderedSlugs();
+const idx = order.indexOf(page.slug);
+function adj(i: number) {
+  const s = i >= 0 && i < order.length ? order[i] : undefined;
+  const p = s != null ? getPage(s) : undefined;
+  return p ? { href: `/${p.slug}/`, title: p.titleZh || p.title } : undefined;
+}
+const prev = idx > 0 ? adj(idx - 1) : undefined;
+const next = idx >= 0 && idx < order.length - 1 ? adj(idx + 1) : undefined;
+---
+<Doc
+  title={page.titleZh || page.title}
+  slug={page.slug}
+  sourceUrl={page.sourceUrl}
+  sourceTitle={page.title}
+  updated={page.updated}
+  description={page.description}
+  editPath={page.editPath}
+  prev={prev}
+  next={next}
+>
+  <Bilingual enBody={page.enBody} zhBody={page.zhBody} slug={page.slug} sourceUrl={page.sourceUrl} />
+</Doc>

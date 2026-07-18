@@ -1,0 +1,31 @@
+{
+  "name": "astro-parallel-docs",
+  "version": "1.0.0",
+  "description": "Shared Astro theme for bilingual (original/translation) side-by-side documentation sites. Consumed as a git submodule; reads each site's site.config.mjs via the @config alias.",
+  "type": "module",
+  "private": true,
+  "files": [
+    "layouts",
+    "components",
+    "lib",
+    "styles",
+    "astro.preset.mjs",
+    "config.d.ts",
+    "deps.json",
+    "README.md",
+    "README.zh.md"
+  ],
+  "peerDependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "astro": "^7.0.9",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5"
+  }
+}

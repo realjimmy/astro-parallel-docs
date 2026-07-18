@@ -1,0 +1,53 @@
+---
+// Generic, config-driven landing. A site can render this from its
+// src/pages/index.astro (`<Landing />`) to get a template home page, or ignore
+// it and hand-write a fully custom index.astro instead.
+import Doc from '../layouts/Doc.astro';
+import config from '@config';
+import { strings as S } from '../lib/strings';
+const L = config.landing ?? {};
+---
+<Doc title={S.homeTitle} slug="" hero={true} description={config.siteName}>
+  <section class="hero">
+    {L.eyebrow && <p class="eyebrow">{L.eyebrow}</p>}
+    <h1>{L.titleZh || config.siteName}{L.subtitle && <span class="en">{L.subtitle}</span>}</h1>
+    {L.entryHref && (
+      <a class="hero-enter" href={L.entryHref}>{S.landingEnter}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></a>
+    )}
+  </section>
+
+  {L.notes && L.notes.length > 0 && (
+    <section class="landing-notes">
+      {L.notes.map((n: any) => (
+        <article class="note">
+          <h2 class="note-q">{n.title}</h2>
+          <p set:html={n.body}></p>
+          {n.action && (
+            <a class="note-action" href={n.action.href} target={n.action.external ? '_blank' : undefined} rel={n.action.external ? 'noopener noreferrer' : undefined}>{n.action.label}</a>
+          )}
+        </article>
+      ))}
+    </section>
+  )}
+
+  <script is:inline>
+    (function () {
+      function typeHero() {
+        var el = document.querySelector('.hero .en');
+        if (!el || el.dataset.typed) return;
+        el.dataset.typed = '1';
+        var full = el.textContent;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        el.textContent = '';
+        el.classList.add('typing');
+        var i = 0;
+        (function step() {
+          el.textContent = full.slice(0, i);
+          if (i++ < full.length) { setTimeout(step, 60); }
+          else { el.classList.remove('typing'); }
+        })();
+      }
+      document.addEventListener('astro:page-load', typeHero);
+    })();
+  </script>
+</Doc>

@@ -1,0 +1,18 @@
+---
+// Behavior lives in Doc.astro (survives client-side navigation). Markup only.
+import { strings as S } from '../lib/strings';
+---
+<div class="view-toggle" data-view-menu>
+  <button class="view-current" data-view-toggle-btn aria-haspopup="listbox" aria-expanded="false" aria-label={S.viewMenuLabel}>
+    <svg class="view-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M7 5 L3 9 l4 4" /><path d="M3 9 h13" /><path d="M17 19 l4 -4 -4 -4" /><path d="M21 15 H8" />
+    </svg>
+    <span data-view-label>{S.viewBoth}</span>
+    <span class="view-caret" aria-hidden="true">▾</span>
+  </button>
+  <div class="view-pop" data-view-pop role="listbox" hidden>
+    <button data-view-btn="both">{S.viewBoth}</button>
+    <button data-view-btn="zh">{S.viewTranslation}</button>
+    <button data-view-btn="en">{S.viewOriginal}</button>
+  </div>
+</div>

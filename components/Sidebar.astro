@@ -1,0 +1,186 @@
+---
+import { buildNav, type NavNode } from '../lib/nav';
+import config from '@config';
+import { strings as S } from '../lib/strings';
+const sections = buildNav();
+const navStrings = { loading: S.navLoading, loadError: S.navLoadError };
+const { currentSlug } = Astro.props as { currentSlug: string };
+
+function renderNodes(nodes: NavNode[]): string {
+  return `<ul class="nav-list">${nodes.map(nodeItem).join('')}</ul>`;
+}
+// Sidebar groups that start collapsed (from site config); every other group is
+// expanded by default.
+const COLLAPSED_BY_DEFAULT = new Set(config.collapsedByDefault ?? []);
+
+function nodeItem(n: NavNode): string {
+  const cur = n.href === `/${currentSlug}/` ? ' aria-current="page"' : '';
+  const bilingual = n.subtitle && n.subtitle !== n.title;
+  const labels = bilingual
+    ? `<span class="nav-labels"><span class="nav-zh">${n.title}</span><span class="nav-en">${n.subtitle}</span></span>`
+    : `<span class="nav-labels"><span class="nav-zh">${n.title}</span></span>`;
+  const dot = `<span class="nav-dot" data-tr="${n.translated ? 'y' : 'n'}" aria-hidden="true"></span>`;
+  const label = n.href
+    ? `<a class="nav-link" href="${n.href}"${cur}>${labels}</a>`
+    : `<span class="nav-group nav-link">${labels}</span>`;
+  if (!n.children.length) {
+    return `<li class="nav-item"><div class="nav-row">${label}${dot}</div></li>`;
+  }
+  const collapsed = COLLAPSED_BY_DEFAULT.has(n.href);
+  const toggle = `<button class="nav-toggle" type="button" aria-expanded="${collapsed ? 'false' : 'true'}" aria-label="${S.navToggleLabel}"><span class="nav-chev" aria-hidden="true">›</span></button>`;
+  const kids = `<ul class="nav-list nav-children"${collapsed ? ' hidden' : ''}>${n.children.map(nodeItem).join('')}</ul>`;
+  return `<li class="nav-item has-children"><div class="nav-row">${label}${toggle}${dot}</div>${kids}</li>`;
+}
+
+// Faceted-catalog mode (config.nav.dimensions): the whole tree is client-
+// rendered from per-dimension JSON endpoints with a switcher on top (for very
+// large sites). Otherwise the scoped / full server-rendered tree is used.
+const dims = config.nav?.dimensions;
+const defaultDim = config.nav?.defaultDimension ?? dims?.[0]?.key ?? '';
+const scoped = config.nav?.scoped ?? false;
+const secList = sections.map((s) => {
+  const open = currentSlug.startsWith(`official/${s.key}`);
+  return {
+    ...s,
+    isLeaf: s.children.length === 0,
+    cur: s.href === `/${currentSlug}/`,
+    open,
+    lazy: scoped && !open && s.children.length > 0,
+    childrenHtml: !scoped || open ? renderNodes(s.children) : '',
+  };
+});
+---
+<nav class="sidebar" aria-label={S.sidebarLabel} transition:persist="sidebar">
+  <a class="brand" href="/">
+    <span class="brand-mark" aria-hidden="true" set:html={config.brandMark}></span>
+    <span class="brand-name">{config.siteName}<span class="brand-ver">v{config.version}</span></span>
+  </a>
+
+  {dims ? (
+    <Fragment>
+      <div class="nav-dims" role="tablist" aria-label={S.navDimsLabel} data-default={defaultDim}>
+        {dims.map((d) => (
+          <button class="nav-dim-tab" type="button" role="tab" data-dim={d.key} data-url={d.data}>{d.label}</button>
+        ))}
+      </div>
+      <div class="nav-tree" aria-live="polite"><div class="nav-loading" aria-hidden="true">{S.navLoading}</div></div>
+    </Fragment>
+  ) : (
+    secList.map((s) => (
+      s.isLeaf ? (
+        <a class="nav-section nav-section-leaf" href={s.href} aria-current={s.cur ? 'page' : undefined}>
+          <span class="nav-sec-labels">
+            <span class="nav-sec-title">{s.title}</span>
+            <span class="nav-sec-en">{s.subtitle}</span>
+          </span>
+          <span class="nav-dot" data-tr={s.translated ? 'y' : 'n'} aria-hidden="true"></span>
+        </a>
+      ) : (
+        <details class="nav-section" open={s.open} data-nav-key={s.key}>
+          <summary>
+            <span class="nav-sec-labels">
+              <span class="nav-sec-title">{s.title}</span>
+              <span class="nav-sec-en">{s.subtitle}</span>
+            </span>
+            <span class="nav-dot" data-tr={s.translated ? 'y' : 'n'} aria-hidden="true"></span>
+          </summary>
+          {s.lazy ? <div class="nav-lazy" data-nav-key={s.key}></div> : <div set:html={s.childrenHtml}></div>}
+        </details>
+      )
+    ))
+  )}
+</nav>
+
+<script is:inline define:vars={{ navStrings }}>
+  // One raw inline script (raw so `<` etc. are not HTML-escaped). Dispatches on
+  // whether the sidebar is in faceted-catalog mode (.nav-dims present) or the
+  // scoped lazy-tree mode. Runs once; keeps working across view transitions via
+  // the persisted sidebar + document-level astro:page-load listeners.
+  (function () {
+    var wrap = document.querySelector('.sidebar');
+    if (!wrap) return;
+    function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+    function itemHtml(n) {
+      var bil = n.subtitle && n.subtitle !== n.title;
+      var labels = '<span class="nav-labels"><span class="nav-zh">' + esc(n.title) + '</span>' + (bil ? '<span class="nav-en">' + esc(n.subtitle) + '</span>' : '') + '</span>';
+      var dot = '<span class="nav-dot" data-tr="' + (n.translated ? 'y' : 'n') + '" aria-hidden="true"></span>';
+      var cur = location.pathname === n.href ? ' aria-current="page"' : '';
+      return '<li class="nav-item"><div class="nav-row"><a class="nav-link" href="' + n.href + '"' + cur + '>' + labels + '</a>' + dot + '</div></li>';
+    }
+    function listHtml(items) { return '<ul class="nav-list">' + items.map(itemHtml).join('') + '</ul>'; }
+
+    var dimsBar = wrap.querySelector('.nav-dims');
+    if (dimsBar) {
+      var tree = wrap.querySelector('.nav-tree'), cache = {}, KEY = 'docs-nav-dim';
+      function load(url) { if (cache[url]) return Promise.resolve(cache[url]); return fetch(url).then(function (r) { return r.json(); }).then(function (d) { cache[url] = d; return d; }); }
+      function activeUrl() { var t = dimsBar.querySelector('.nav-dim-tab.active'); return t ? t.dataset.url : null; }
+      function fill(box, items) { box.innerHTML = listHtml(items); box.dataset.loaded = '1'; }
+      function renderTree(groups) {
+        var curIdx = -1, i;
+        for (i = 0; i < groups.length; i++) if (groups[i].items.some(function (x) { return x.href === location.pathname; })) { curIdx = i; break; }
+        tree.innerHTML = groups.map(function (g, i) {
+          return '<details class="nav-section"' + (i === curIdx ? ' open' : '') + ' data-idx="' + i + '"><summary><span class="nav-sec-labels"><span class="nav-sec-title">' + esc(g.label) + '</span></span></summary><div class="nav-cat"></div></details>';
+        }).join('');
+        tree.querySelectorAll('details.nav-section').forEach(function (det) {
+          var idx = +det.dataset.idx, box = det.querySelector('.nav-cat');
+          det.addEventListener('toggle', function () { if (det.open && !box.dataset.loaded) fill(box, groups[idx].items); });
+          if (det.open && !box.dataset.loaded) fill(box, groups[idx].items);
+        });
+      }
+      function show(url) {
+        tree.innerHTML = '<div class="nav-loading" aria-hidden="true">' + navStrings.loading + '</div>';
+        load(url).then(function (g) { if (activeUrl() === url) renderTree(g); }).catch(function () { tree.innerHTML = '<div class="nav-loading">' + navStrings.loadError + '</div>'; });
+      }
+      function activate(key, persist) {
+        var found = null;
+        dimsBar.querySelectorAll('.nav-dim-tab').forEach(function (b) { var on = b.dataset.dim === key; b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); if (on) found = b; });
+        if (!found) { found = dimsBar.querySelector('.nav-dim-tab'); found.classList.add('active'); }
+        if (persist) try { localStorage.setItem(KEY, found.dataset.dim); } catch (e) {}
+        show(found.dataset.url);
+      }
+      function refresh() {
+        var g = cache[activeUrl()]; if (!g) return;
+        tree.querySelectorAll('a.nav-link[aria-current]').forEach(function (a) { a.removeAttribute('aria-current'); });
+        for (var i = 0; i < g.length; i++) if (g[i].items.some(function (x) { return x.href === location.pathname; })) {
+          var det = tree.querySelector('details[data-idx="' + i + '"]');
+          if (det) { if (!det.open) det.open = true; var box = det.querySelector('.nav-cat'); if (box && !box.dataset.loaded) fill(box, g[i].items); }
+          break;
+        }
+        var sel = window.CSS && CSS.escape ? CSS.escape(location.pathname) : location.pathname;
+        var link = tree.querySelector('a.nav-link[href="' + sel + '"]'); if (link) link.setAttribute('aria-current', 'page');
+      }
+      if (!dimsBar.dataset.wired) {
+        dimsBar.dataset.wired = '1';
+        dimsBar.querySelectorAll('.nav-dim-tab').forEach(function (b) { b.addEventListener('click', function () { activate(b.dataset.dim, true); }); });
+        document.addEventListener('astro:page-load', refresh);
+        var initial; try { initial = localStorage.getItem(KEY); } catch (e) {}
+        activate(initial || dimsBar.dataset.default, false);
+      }
+      return;
+    }
+
+    // scoped lazy-tree mode (no dimensions)
+    var lcache = null, lpending = null;
+    function lload() { if (lcache) return Promise.resolve(lcache); if (!lpending) lpending = fetch('/nav-index.json').then(function (r) { return r.json(); }).then(function (d) { lcache = d; return d; }); return lpending; }
+    function hydrate(box) {
+      if (!box || box.dataset.loaded) return;
+      box.dataset.loaded = '1';
+      box.innerHTML = '<div class="nav-loading" aria-hidden="true">' + navStrings.loading + '</div>';
+      var key = box.dataset.navKey;
+      lload().then(function (d) { var sec = d.filter(function (s) { return s.key === key; })[0]; box.innerHTML = sec ? listHtml(sec.items) : ''; }).catch(function () { box.innerHTML = ''; box.dataset.loaded = ''; });
+    }
+    function wire() {
+      var m = location.pathname.match(/^\/official\/([^/]+)\//);
+      var curKey = m ? m[1] : null;
+      document.querySelectorAll('.sidebar details.nav-section').forEach(function (det) {
+        var box = det.querySelector(':scope > .nav-lazy');
+        if (!box) return;
+        if (!det.dataset.wired) { det.dataset.wired = '1'; det.addEventListener('toggle', function () { if (det.open) hydrate(box); }); }
+        if (det.dataset.navKey === curKey && !det.open) det.open = true;
+        if (det.open) hydrate(box);
+      });
+    }
+    document.addEventListener('astro:page-load', wire);
+    wire();
+  })();
+</script>

@@ -1,0 +1,27 @@
+{
+  "_comment": "Canonical dependency set the skin needs. A consuming site must have these in its own package.json (a git submodule does not bring node_modules). Install with the npm command in README.md.",
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/space-grotesk": "^5.2.10",
+    "astro": "^7.0.9",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-rehype": "^11.1.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/sitemap": "^3.7.3",
+    "@types/node": "^26.1.1",
+    "cheerio": "^1.2.0",
+    "gray-matter": "^4.0.3",
+    "pagefind": "^1.5.2",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
+    "typescript": "^6.0.3",
+    "unified": "^11.0.5",
+    "vitest": "^4.1.10"
+  }
+}
