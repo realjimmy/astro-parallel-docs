@@ -140,8 +140,8 @@ Notes from production runs:
 
 ## 8. Verification checklist (always, before committing)
 
-- [ ] `npm run build` completes, **457-page count as expected**, and there is **no
-      `[align] block-count mismatch`** warning.
+- [ ] `npm run build` completes, the page count matches what the site expects,
+      and there is **no `[align] block-count mismatch`** warning.
 - [ ] The English-prose scan (§5) returns **0** for the touched files.
 - [ ] Spot-check a built page: `zh` column is Chinese, `en` column is the
       original, and `[hash](url)` links / code are intact.
@@ -156,3 +156,45 @@ Notes from production runs:
 - Never alter block count / blank-line structure — it desynchronizes the columns.
 - Keep code, commands, identifiers, tables, citations, and hashes in the original.
 - One build at the end; never a build storm.
+
+## 10. Frontmatter, internal links, and a per-file block check (addendum)
+
+Notes from a full DPDK run that complement the sections above.
+
+### Frontmatter: translate `title`, keep `sourceUrl` verbatim
+
+Each extracted page carries YAML frontmatter with `title` and `sourceUrl`.
+Translate `title`; leave `sourceUrl` **byte-for-byte unchanged**. The theme's
+link rewriter (`lib/align.ts#rewriteInternalLinks`) resolves every relative
+`*.html` / `*.rst` link *against this page's `sourceUrl` at build time*, so
+altering it breaks in-page links. (It is also why the §4 version diff ignores
+`^sourceUrl:` — the version lives there.)
+
+### Internal doc links and images are rewritten for you — leave the targets as-is
+
+Beyond the `[hash](url)` links of §3, upstream pages carry **relative doc links**
+(`../rel_notes/index.html`, `building.html`) and image paths (`_images/…`,
+`/assets/…`). Do not translate or "fix" these *targets* into site routes — the
+theme rewrites `*.html` / `*.rst` → `/official/<slug>/` and `_images/…` →
+`/assets/…` on its own. Translate only the link **text**. Likewise keep escaped
+heading numbering exactly: `# 1\. Introduction` → `# 1\. 简介` (the `\.` is easy
+to drop and changes how the line parses). A block that is a heading in the
+original must stay a heading at the same level — the TOC and anchors are built
+from heading blocks.
+
+### Verify each file with the theme's own splitter — don't wait for the build
+
+The build's `[align] block-count mismatch` warning is the last line of defense.
+A faster, file-by-file gate is to count blocks with the **same** splitter the
+theme aligns with. `splitBlocks` is exported from `theme/lib/align.ts`:
+
+```js
+import { splitBlocks } from '../theme/lib/align.ts';
+// a pair is aligned iff splitBlocks(enSource).length === splitBlocks(zhSource).length
+```
+
+Re-implementing the split in a site-local script (e.g. a hand-rolled
+`scripts/blockcount.mjs`) risks drifting from the theme: a file can then pass the
+local check yet still desync at render. Import the theme's `splitBlocks`, or keep
+any local copy exactly in step with `lib/align.ts` (same `remark-parse` +
+`remark-gfm`, top-level children only).
