@@ -258,3 +258,89 @@ title contains a colon, a quote, or a literal backslash (e.g. RFC 8457's
 YAML that fails to parse silently drops the whole page from the build, and the
 missing page is easy to miss against a set of thousands. In Chinese titles prefer
 a full-width colon `：`, so the line never needs re-quoting in the first place.
+
+## 12. Get the block classification right — and translate a fenced block as a whole (addendum)
+
+The single biggest source of "bad translations" is usually not the translation
+step: it is the site's own extractor **mis-classifying blocks** when it converts
+the upstream into `content/en`. This is format-agnostic — whether the upstream is
+plain text, HTML, reStructuredText, AsciiDoc, or Markdown, the extractor must
+decide what becomes a fenced code block and what stays prose, and it will get
+some wrong. It matters because of one rule:
+
+> **A fenced block is translated as a unit — i.e. not at all.** Keep 100% of a
+> code fence in the original language; never translate selected lines *inside* a
+> fence.
+
+Why whole-or-nothing:
+
+- **Verbatim integrity** — code, commands, and config are copied/run as-is.
+- **Monospace alignment** — diagrams and aligned tables depend on column widths;
+  wide (CJK) glyphs destroy that alignment the moment you translate into them.
+- **Labels are part of the artifact** — `Host A`, field names, and variable names
+  are referenced by the surrounding prose.
+
+The corollary is the whole point: if a fenced block *ought* to be translated,
+that is the signal it was **mis-classified**. Fix the classification in the
+extractor — do not translate inside the fence.
+
+**Fence (keep verbatim, original language) only:**
+
+- ASCII diagrams, network topologies, packet / bit-field layouts;
+- real source code and pseudocode;
+- alignment-critical tables and dot-leader tables of contents (an unfenced TOC
+  collapses into one run-on line — Markdown eats the newlines).
+
+**Do not fence — these are prose and must translate:**
+
+- lettered / numbered / bulleted **lists** (`a) …`, `o …`, `1. …`) → emit as real
+  Markdown lists. Beware a blanket extractor rule like *"indent ≥ N ⇒ code
+  fence"*: many upstreams indent lists and quotations deeply, so that rule turns
+  prose into code across the whole set;
+- indented definition / quotation paragraphs and `Note:` blocks;
+- **figure / table captions** — keep them as their own text line *outside* the
+  fence, so the caption translates while the figure body stays original.
+
+Structural traps when the upstream is paginated or chrome-wrapped:
+
+- **A figure split by an internal blank line** (or a page break) becomes two
+  fenced blocks, and its caption drifts into a third — merge adjacent diagram
+  blocks back into one fence.
+- **Strip upstream boilerplate before block-splitting** — page footers / running
+  headers / form-feeds in text, nav/breadcrumb chrome in HTML — or it fragments
+  whatever spans it.
+
+Prefer a **real Markdown table** (translatable cells) over a fenced ASCII table
+when the cells are natural language; keep it fenced only when column width is
+genuinely load-bearing. Code **comments** stay in the original (they travel with
+the code); if a note is needed, add it as prose *after* the block.
+
+An audit that catches copied-in English regardless of cause: because the columns
+are block-aligned (§1), a `zh` block byte-identical to its `en` block is
+untranslated. Compare block-by-block (normalize whitespace) and flag matches,
+excluding the legitimately-identical kinds (code, tables, addresses, citations,
+the copyright line, formulas). This finds prose a plain "no-CJK" scan (§5) misses
+when the block also carries identifiers.
+
+## 13. Encoding & linking gotchas, and a normative-corpus glossary (addendum)
+
+- **A bare URL immediately followed by a CJK / full-width character gets its
+  trailing text swallowed by the link.** GFM autolink extends the URL through any
+  non-whitespace run, and CJK punctuation is not a delimiter, so
+  `…（http://example.org/x）后面的文字…` becomes one giant link. Wrap such URLs in
+  angle brackets — `<http://example.org/x>` — to terminate the autolink (a
+  trailing space also works but changes the visible text).
+- **Do not write non-ASCII with `perl -e 's/…/文字/'` or `sed` unless the tool is
+  UTF-8-clean.** A literal in a `-e` script without `use utf8;` is treated as
+  bytes and re-encoded on write, producing mojibake (`æ¬å°…`). Use UTF-8-correct
+  editing (the agent's file tools, or Node) for any replacement containing
+  non-ASCII; plain-ASCII edits (e.g. wrapping a URL in `<>`) are safe.
+
+**Glossary items to pin for normative / standards-track corpora** (e.g. RFC/IETF;
+the pattern generalizes to any spec with requirement keywords): render the
+keywords as *native（ENGLISH）* so the normative force is unambiguous — for Chinese:
+必须（MUST）/ 禁止（MUST NOT）/ 应当（SHOULD）/ 不应（SHOULD NOT）/ 可以（MAY）/
+建议（RECOMMENDED）. Translate the document title and the *labels* of the masthead
+(working group / "Request for Comments:" / "Category:" / date), but keep author
+names, affiliations, identifiers, the copyright line, and the
+authors'-addresses block in the original.
