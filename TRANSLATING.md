@@ -198,3 +198,63 @@ Re-implementing the split in a site-local script (e.g. a hand-rolled
 local check yet still desync at render. Import the theme's `splitBlocks`, or keep
 any local copy exactly in step with `lib/align.ts` (same `remark-parse` +
 `remark-gfm`, top-level children only).
+
+## 11. Terminology, orchestration, and split-page manuals (addendum)
+
+Notes from translating the TRex manuals (book-length asciidoc, ~300 pages) and
+the RFC series (~9,800 `.txt` pages) — both fanned out across dozens of agents in
+one run. Block alignment (§1) keeps the *columns* in sync; none of it keeps the
+*wording* consistent, and that is what breaks first at scale.
+
+### Hand every fan-out agent the same glossary
+
+Dozens of agents translating independently will render the same term dozens of
+ways — "stateless" as 无状态 / 无状态的 / stateless, "latency" as 延迟 / 时延 —
+and the set reads as if written by dozens of people, because it was. Before
+fanning out (§7), build a short **glossary** and paste it into *every* agent's
+prompt:
+
+- fixed Chinese renderings for the domain's recurring terms (protocols, modes,
+  metrics), **and**
+- the terms to **leave in English** for this project (product names, CLI verbs,
+  API identifiers — §3), so agents don't "helpfully" translate them.
+
+Pin the **admonition labels** there too (`Note → 注意`, `Warning → 警告`,
+`Tip → 提示`, `Important → 重要`, `Caution → 谨慎`): they recur on hundreds of
+pages and are the most visible inconsistency when each agent guesses. A glossary
+is cheap insurance — it costs a few lines in each prompt and is the difference
+between a coherent set and a patchwork.
+
+### Driving the fan-out from a `Workflow`: `args` arrives as a JSON string
+
+When a `Workflow` script hands each subagent its file list through `args`, the
+value comes in as a **JSON string, not a parsed array** — `args.map(...)` throws
+before a single file is dispatched. Parse defensively at the top of the script:
+
+```js
+const files = Array.isArray(args) ? args : JSON.parse(args);
+```
+
+Then keep the §7 rules unchanged: agents **edit only**; run **one** central
+`npm run build` at the end (concurrent builds OOM); no worktrees, since the
+agents touch disjoint files.
+
+### Split-page manuals: decide boilerplate once, not per page
+
+When the extractor splits one upstream page (an asciidoc/HTML book) into many
+section pages — at `h2`, then `h3` — the same admonition labels, table headers,
+and stock sentences recur across *hundreds* of files. Don't re-decide them file
+by file: put them in the glossary and let a replace-all pass (§7) make every
+occurrence identical. And cross-section `<<anchor>>` references become ordinary
+relative links the theme rewrites for you (§10) — even when the target is another
+section of the *same* manual, leave the target alone and translate only the link
+text.
+
+### Frontmatter: keep the translated `title` YAML-safe
+
+§10 says translate `title`. When you do, preserve the extractor's quoting. If a
+title contains a colon, a quote, or a literal backslash (e.g. RFC 8457's
+`\Important`), it must stay **double-quoted with backslashes escaped** (`\\`) —
+YAML that fails to parse silently drops the whole page from the build, and the
+missing page is easy to miss against a set of thousands. In Chinese titles prefer
+a full-width colon `：`, so the line never needs re-quoting in the first place.
