@@ -8,6 +8,12 @@ full-text search, three reading modes, light/dark, and a color scheme per site.
 Consumed as a **git submodule**; every site-specific value lives in one
 `site.config.mjs`.
 
+> **Translating with an AI agent?** See **[TRANSLATING.md](./TRANSLATING.md)** —
+> how to drive an AI (e.g. Claude Code) to translate a whole docs set against this
+> theme: the block-alignment contract, what to translate vs leave in the original,
+> change detection on version bumps, scaling with parallel agents, and the
+> verification checklist.
+
 ## Features
 
 - **Paragraph-aligned parallel layout** — original and translation in two lanes,
