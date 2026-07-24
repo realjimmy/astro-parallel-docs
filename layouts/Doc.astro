@@ -237,15 +237,17 @@ const editUrl = (config.showEditLink && editPath) ? `${config.repoUrl}/edit/main
           try { dismissed = localStorage.getItem(HINT_KEY) === '1'; } catch (e) {}
           document.querySelectorAll('[data-mobile-hint]').forEach(function (h) { h.classList.toggle('dismissed', dismissed); });
         }
-        // localhost / loopback / private-LAN / mDNS hosts count as "local":
-        // we suppress copy attribution there so local previews stay clean
-        function isLocalHost() {
-          var h = location.hostname || '';
-          return h === 'localhost' || /\.localhost$/.test(h) ||
-            /^127\./.test(h) || h === '::1' || h === '0.0.0.0' || h === '' ||
-            /^10\./.test(h) || /^192\.168\./.test(h) ||
-            /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-            /^169\.254\./.test(h) || /\.local$/.test(h);
+        // Copy attribution is added only when the page is served from a real
+        // domain. Any bare IP literal (IPv4/IPv6, public OR private) or a local
+        // host name (localhost / *.localhost / *.local / empty) counts as a
+        // non-production origin, so copies made there stay clean — visiting a
+        // site by its IP instead of its domain suppresses the source line.
+        function isNonProdHost() {
+          var h = (location.hostname || '').replace(/^\[|\]$/g, '');
+          if (!h || h === 'localhost' || /\.localhost$/.test(h) || /\.local$/.test(h)) return true;
+          if (h.indexOf(':') >= 0) return true;                // IPv6 literal
+          if (/^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return true;  // IPv4 literal
+          return false;
         }
 
         // add code-copy buttons and mark external links (re-run per navigation)
@@ -436,7 +438,7 @@ const editUrl = (config.showEditLink && editPath) ? `${config.repoUrl}/edit/main
           // when a reader copies a chunk of an article, append the source line
           document.addEventListener('copy', function (e) {
             if (!document.querySelector('.bilingual')) return; // articles only
-            if (isLocalHost()) return; // local previews: native copy, no attribution
+            if (isNonProdHost()) return; // IP / local host: native copy, no attribution
             var sel = window.getSelection ? String(window.getSelection()) : '';
             if (!sel || sel.length < 12) return; // don't bother tiny selections
             var m = document.querySelector('meta[name="x-copy-note"]');
