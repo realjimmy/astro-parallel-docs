@@ -75,6 +75,29 @@ export default {
     titleZh: 'Foo Docs',
     subtitle: 'Read the original and the translation side by side.',
     entryHref: '/official/intro/',
-    notes: [],
+    // Landing "sticky notes": short cards under the hero. `body` accepts HTML;
+    // `action` is an optional link (set `external: true` to open in a new tab).
+    notes: [
+      {
+        title: 'Read it side by side',
+        body: 'Every page shows the English original and its translation in two columns. Use the <strong>Original / Translation / Both</strong> toggle in the header, or the <strong>peek</strong> button on any row to reveal just that line.',
+        action: { label: 'Start with the intro', href: '/official/intro/' },
+      },
+      {
+        title: 'In a hurry?',
+        body: 'Install the CLI and clean your first messy CSV in about a minute — no configuration needed for the common case.',
+        action: { label: 'Quick start', href: '/official/guide/quickstart/' },
+      },
+      {
+        title: 'New in 1.0',
+        body: 'Date and money columns are now inferred from the data by default, and <code>foo.toml</code> can turn any rule off. Environment variables override the file.',
+        action: { label: 'See configuration', href: '/official/reference/configuration/' },
+      },
+      {
+        title: 'Spotted a bad translation?',
+        body: 'Corrections are welcome. Each page has a source link back to the upstream docs, and the site itself is open source.',
+        action: { label: 'Edit on GitHub', href: 'https://github.com/you/foo-docs', external: true },
+      },
+    ],
   },
 };
