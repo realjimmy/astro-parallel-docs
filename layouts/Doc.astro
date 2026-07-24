@@ -237,11 +237,27 @@ const editUrl = (config.showEditLink && editPath) ? `${config.repoUrl}/edit/main
           try { dismissed = localStorage.getItem(HINT_KEY) === '1'; } catch (e) {}
           document.querySelectorAll('[data-mobile-hint]').forEach(function (h) { h.classList.toggle('dismissed', dismissed); });
         }
+        // localhost / loopback / private-LAN / mDNS hosts count as "local":
+        // we suppress copy attribution there so local previews stay clean
+        function isLocalHost() {
+          var h = location.hostname || '';
+          return h === 'localhost' || /\.localhost$/.test(h) ||
+            /^127\./.test(h) || h === '::1' || h === '0.0.0.0' || h === '' ||
+            /^10\./.test(h) || /^192\.168\./.test(h) ||
+            /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+            /^169\.254\./.test(h) || /\.local$/.test(h);
+        }
+
         // add code-copy buttons and mark external links (re-run per navigation)
         function enhanceArticle() {
+          // the copy button writes via navigator.clipboard.writeText, which only
+          // exists in a secure context (HTTPS / localhost). On plain HTTP + IP it is
+          // absent, so we skip the button rather than show one that silently no-ops.
+          var canCopy = !!(navigator.clipboard && navigator.clipboard.writeText);
           document.querySelectorAll('.bilingual pre').forEach(function (pre) {
             if (pre.dataset.copyReady || !pre.querySelector('code')) return;
             pre.dataset.copyReady = '1';
+            if (!canCopy) return;
             var b = document.createElement('button');
             b.type = 'button'; b.className = 'code-copy'; b.textContent = ui.codeCopy;
             pre.appendChild(b);
@@ -420,12 +436,13 @@ const editUrl = (config.showEditLink && editPath) ? `${config.repoUrl}/edit/main
           // when a reader copies a chunk of an article, append the source line
           document.addEventListener('copy', function (e) {
             if (!document.querySelector('.bilingual')) return; // articles only
+            if (isLocalHost()) return; // local previews: native copy, no attribution
             var sel = window.getSelection ? String(window.getSelection()) : '';
             if (!sel || sel.length < 12) return; // don't bother tiny selections
             var m = document.querySelector('meta[name="x-copy-note"]');
-            var note = m ? '\n\n— ' + m.getAttribute('content') : '';
+            if (!m) return; // no note configured: leave the native copy alone
             try {
-              (e.clipboardData || window.clipboardData).setData('text/plain', sel + note);
+              (e.clipboardData || window.clipboardData).setData('text/plain', sel + '\n\n— ' + m.getAttribute('content'));
               e.preventDefault();
             } catch (err) {}
           });
