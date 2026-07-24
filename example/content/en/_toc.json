@@ -1,0 +1,5 @@
+[
+  { "href": "intro", "title": "Introduction", "level": 1 },
+  { "href": "guide/quickstart", "title": "Quick start", "level": 2 },
+  { "href": "reference/configuration", "title": "Configuration", "level": 2 }
+]
