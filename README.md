@@ -80,15 +80,25 @@ bundled `example/` scaffold — no submodule, no separate repo:
 ```bash
 npm install          # dev-only deps (mirrors deps.json)
 npm run preview      # dev server on example/  →  http://localhost:4321
-npm run preview:build   # or a one-off static build into example/dist/
+npm run preview:serve   # or build once and serve the static output
+npm run preview:build   # or just a one-off static build into example/dist/
 ```
 
 `preview` first links `example/theme → ..` (so the scaffold resolves this repo
-as its `theme/` submodule would), then runs `astro dev --root example`. The
-link, `node_modules/`, and build output are git-ignored, so previewing never
-dirties the tree. Full-text search isn't indexed in preview (that runs
-Pagefind at a site's own `build` step); everything else renders as it will on a
-real site.
+as its `theme/` submodule would), then runs `astro dev --root example --host`.
+The link, `node_modules/`, and build output are git-ignored, so previewing
+never dirties the tree.
+
+- **All interfaces:** `--host` binds `0.0.0.0`, so the server is reachable from
+  other machines at `http://<this-host-ip>:4321/` (Astro prints the Network
+  URL on startup) — handy for checking a phone or another box on the LAN.
+- **Port in use:** if 4321 is taken, Astro doesn't fail — it auto-increments to
+  the next free port (4322, …) and prints the URL it actually bound.
+- **Insecure-context note:** over a bare-IP `http://` origin the browser has no
+  `navigator.clipboard`, so the code-copy button is intentionally hidden and
+  copied text carries no attribution — expected, matching a plain-HTTP deploy.
+- **Search:** full-text search isn't indexed in preview (that runs Pagefind at
+  a site's own `build` step); everything else renders as it will on a real site.
 
 ## Adding the theme to a site
 

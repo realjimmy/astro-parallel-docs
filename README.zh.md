@@ -62,13 +62,24 @@ your-site/
 ```bash
 npm install          # 仅开发用的依赖(与 deps.json 一致)
 npm run preview      # 在 example/ 上起 dev 服务  →  http://localhost:4321
-npm run preview:build   # 或一次性静态构建到 example/dist/
+npm run preview:serve   # 或先构建再用静态服务器伺服
+npm run preview:build   # 或只做一次性静态构建到 example/dist/
 ```
 
 `preview` 会先建立软链 `example/theme → ..`(让脚手架把本仓库当成它的
-`theme/` submodule 来解析),再运行 `astro dev --root example`。软链、
-`node_modules/`、构建产物都已被 git 忽略,预览不会弄脏工作区。预览下不会索引
-全文搜索(那是站点自己 `build` 时跑 Pagefind 的步骤),其余部分与真实站点一致。
+`theme/` submodule 来解析),再运行 `astro dev --root example --host`。软链、
+`node_modules/`、构建产物都已被 git 忽略,预览不会弄脏工作区。
+
+- **监听所有接口**:`--host` 绑定 `0.0.0.0`,别的机器可通过
+  `http://<本机IP>:4321/` 访问(启动时 Astro 会打印 Network 地址),方便用
+  手机或局域网另一台机器查看。
+- **端口冲突**:4321 被占用时 Astro **不会报错退出**,而是自动顺延到下一个空闲
+  端口(4322……)并打印实际绑定的地址。
+- **非安全上下文**:通过裸 IP 的 `http://` 访问时,浏览器没有
+  `navigator.clipboard`,所以代码复制按钮会被有意隐藏、复制文本也不带署名 ——
+  这是预期行为,与纯 HTTP 部署一致。
+- **搜索**:预览下不会索引全文搜索(那是站点自己 `build` 时跑 Pagefind 的
+  步骤),其余部分与真实站点一致。
 
 ## 接入步骤
 

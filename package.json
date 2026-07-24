@@ -17,8 +17,9 @@
   ],
   "scripts": {
     "preview:link": "ln -sfn .. example/theme",
-    "preview": "npm run preview:link && astro dev --root example",
-    "preview:build": "npm run preview:link && astro build --root example"
+    "preview": "npm run preview:link && astro dev --root example --host",
+    "preview:build": "npm run preview:link && astro build --root example",
+    "preview:serve": "npm run preview:build && astro preview --root example --host"
   },
   "peerDependencies": {
     "@astrojs/sitemap": "^3.7.3",
