@@ -1,0 +1,6 @@
+# local preview / dev (see README "Previewing the theme in this repo")
+node_modules/
+package-lock.json
+dist/
+.astro/
+example/theme

@@ -54,6 +54,22 @@ your-site/
 └── src/pages/…            ← 极薄的样板(见 example/)
 ```
 
+## 在本仓库内预览主题
+
+把主题接入真实站点之前,可以直接用仓库自带的 `example/` 脚手架就地预览 ——
+无需 submodule、无需另建仓库:
+
+```bash
+npm install          # 仅开发用的依赖(与 deps.json 一致)
+npm run preview      # 在 example/ 上起 dev 服务  →  http://localhost:4321
+npm run preview:build   # 或一次性静态构建到 example/dist/
+```
+
+`preview` 会先建立软链 `example/theme → ..`(让脚手架把本仓库当成它的
+`theme/` submodule 来解析),再运行 `astro dev --root example`。软链、
+`node_modules/`、构建产物都已被 git 忽略,预览不会弄脏工作区。预览下不会索引
+全文搜索(那是站点自己 `build` 时跑 Pagefind 的步骤),其余部分与真实站点一致。
+
 ## 接入步骤
 
 模板见 `example/`。简而言之:

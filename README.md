@@ -72,6 +72,24 @@ your-site/
 └── src/pages/…            ← thin boilerplate (see example/)
 ```
 
+## Previewing the theme in this repo
+
+Before wiring the theme into a real site, you can preview it here against the
+bundled `example/` scaffold — no submodule, no separate repo:
+
+```bash
+npm install          # dev-only deps (mirrors deps.json)
+npm run preview      # dev server on example/  →  http://localhost:4321
+npm run preview:build   # or a one-off static build into example/dist/
+```
+
+`preview` first links `example/theme → ..` (so the scaffold resolves this repo
+as its `theme/` submodule would), then runs `astro dev --root example`. The
+link, `node_modules/`, and build output are git-ignored, so previewing never
+dirties the tree. Full-text search isn't indexed in preview (that runs
+Pagefind at a site's own `build` step); everything else renders as it will on a
+real site.
+
 ## Adding the theme to a site
 
 See `example/` for copy-paste templates. In short:
