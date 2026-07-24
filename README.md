@@ -94,9 +94,16 @@ never dirties the tree.
   URL on startup) — handy for checking a phone or another box on the LAN.
 - **Port in use:** if 4321 is taken, Astro doesn't fail — it auto-increments to
   the next free port (4322, …) and prints the URL it actually bound.
-- **Insecure-context note:** over a bare-IP `http://` origin the browser has no
-  `navigator.clipboard`, so the code-copy button is intentionally hidden and
-  copied text carries no attribution — expected, matching a plain-HTTP deploy.
+- **Code-copy button (secure context):** the button calls `navigator.clipboard`,
+  which browsers expose only in a secure context (HTTPS or `localhost`). Over
+  plain HTTP — a bare IP, or an `http://` domain — it's absent, so the button is
+  intentionally hidden rather than shown as a silent no-op.
+- **Copy attribution (host-based):** the source line appended to copied article
+  text is dropped only on local hosts — `localhost`, `*.localhost`, `*.local`,
+  loopback, and private-LAN ranges (`10.`, `192.168.`, `172.16–31.`, `169.254.`)
+  — so localhost/LAN previews copy clean. A public domain **or a public IP** still
+  gets it. The two gates are independent: button = secure-context, attribution =
+  hostname.
 - **Search:** full-text search isn't indexed in preview (that runs Pagefind at
   a site's own `build` step); everything else renders as it will on a real site.
 
@@ -148,7 +155,7 @@ All fields live in `site.config.mjs`; types are in `config.d.ts`.
 | `siteUrl` | ✓ | Public URL (canonical, sitemap, robots) |
 | `repoUrl` | ✓ | Repo URL ("improve this page" links) |
 | `translator` | ✓ | Credited translator |
-| `attribution` | ✓ | `{ watermark, copy }` — watermark text + the note appended on copy |
+| `attribution` | ✓ | `{ watermark, copy }` — watermark text + the note appended on copy (dropped on localhost / private-LAN hosts; a public domain or public IP keeps it) |
 | `brandMark` | ✓ | Inline SVG logo (uses `--accent` / `--signal`) |
 | `sections` | ✓ | Ordered top-level nav: `[slugKey, translationLabel, originalLabel][]` |
 | `lang` | | `<html lang>` (default `zh`) |

@@ -75,9 +75,13 @@ npm run preview:build   # 或只做一次性静态构建到 example/dist/
   手机或局域网另一台机器查看。
 - **端口冲突**:4321 被占用时 Astro **不会报错退出**,而是自动顺延到下一个空闲
   端口(4322……)并打印实际绑定的地址。
-- **非安全上下文**:通过裸 IP 的 `http://` 访问时,浏览器没有
-  `navigator.clipboard`,所以代码复制按钮会被有意隐藏、复制文本也不带署名 ——
-  这是预期行为,与纯 HTTP 部署一致。
+- **代码复制按钮(安全上下文)**:按钮用 `navigator.clipboard`,浏览器只在安全
+  上下文(HTTPS 或 `localhost`)下才提供它。纯 HTTP —— 无论裸 IP 还是 `http://`
+  域名 —— 都没有,所以按钮会被有意隐藏,而不是显示一个点了没反应的假按钮。
+- **复制署名(按主机判断)**:复制正文时附加的来源行,只在本地主机上省略 ——
+  `localhost`、`*.localhost`、`*.local`、环回,以及私网段(`10.`、`192.168.`、
+  `172.16–31.`、`169.254.`)—— 所以 localhost/局域网预览复制出来是干净的。**公网
+  域名或公网 IP 仍会带署名**。两个开关相互独立:按钮看安全上下文,署名看主机名。
 - **搜索**:预览下不会索引全文搜索(那是站点自己 `build` 时跑 Pagefind 的
   步骤),其余部分与真实站点一致。
 
@@ -128,7 +132,7 @@ git submodule update --init --recursive && npm run build
 | `siteUrl` | ✓ | 公开地址(canonical、sitemap、robots) |
 | `repoUrl` | ✓ | 仓库地址(「改进本页」链接) |
 | `translator` | ✓ | 署名译者 |
-| `attribution` | ✓ | `{ watermark, copy }` —— 水印文字 + 复制时附加的来源 |
+| `attribution` | ✓ | `{ watermark, copy }` —— 水印文字 + 复制时附加的来源(本地/私网主机不附加;公网域名或公网 IP 仍带) |
 | `brandMark` | ✓ | 内联 SVG logo(用 `--accent`/`--signal`) |
 | `sections` | ✓ | 顶层导航顺序:`[slug, 译文标签, 原文标签][]` |
 | `lang` | | `<html lang>`(默认 `zh`) |
